@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1pmcord</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #000000;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .container {
+            position: relative;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.1), rgba(255, 0, 0, 0.1));
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            width: 500px;
+            max-width: 100%;
+            text-align: center;
+            transition: background-color 0.3s, box-shadow 0.3s;
+            z-index: 1;
+        }
+        h1, label, p {
+            color: #000;
+        }
+        input[type="text"], textarea {
+            display: block;
+            margin: 5px 0 20px;
+            padding: 10px;
+            width: 100%;
+            border: 2px solid transparent;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: #000;
+            border-radius: 4px;
+            box-sizing: border-box;
+            outline: none;
+            transition: box-shadow 0.3s, border 0.3s;
+        }
+        input[type="text"]:focus, textarea:focus {
+            box-shadow: 0 0 10px 2px rgba(255, 0, 0, 0.8);
+            border: 2px solid rgba(255, 0, 0, 0.8);
+        }
+        .red-text {
+            color: red !important;
+        }
+        textarea {
+            resize: none;
+            height: 100px;
+        }
+        button {
+            background-color: #000;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.3s;
+            display: block;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #333;
+        }
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="snowCanvas"></canvas>
+
+    <!-- Token Input View -->
+    <div class="container" id="tokenContainer">
+        <h1 style="color: red; text-shadow: 2px 2px 0 #000;">Enter Token</h1>
+        <input type="text" id="initialToken" placeholder="Token here" required>
+        <button onclick="submitToken()">Enter</button>
+    </div>
+
+    <!-- Auto Sender Main View -->
+    <div class="container" id="mainContainer" style="display:none;">
+        <h1 style="color: red; text-shadow: 2px 2px 0 #000;">1pmcord</h1>
+
+        <input type="text" id="channelId" name="channelId" placeholder="Enter Channel ID" required><br>
+        
+        <input type="text" id="userId1" name="userId1" placeholder="User ID 1" required><br>
+        <input type="text" id="userId2" name="userId2" placeholder="User ID 2" required><br>
+
+        <div class="emoji-picker">
+            <label for="customEmoji"></label>
+            <input type="text" id="customEmoji" placeholder="emoji">
+        </div>
+        
+        <textarea id="messages" name="messages" placeholder="Enter your message" required></textarea><br>
+        <label for="delay">Delay:</label>
+        <input type="number" id="delay" name="delay" min="0.1" max="10" step="0.1" value="0.1">
+
+        <button onclick="sendMessages()">Send Messages</button>
+        <div class="button-group">
+            <button onclick="showGCView()">GC</button>
+            <button onclick="showManualSendView()">manual</button>
+        </div>
+    </div>
+
+    <!-- Manual Send View -->
+    <div class="container" id="manualSendContainer" style="display:none;">
+        <h1 style="color: red; text-shadow: 2px 2px 0 #000;">1pmcord [manual]</h1>
+
+        <input type="text" id="manualChannelId" name="manualChannelId" placeholder="Enter Channel ID" required><br>
+        <input type="text" id="manualUserId" name="manualUserId" placeholder="User ID" required><br>
+        <input type="text" id="manualEmoji" name="manualEmoji" placeholder="Emoji"><br>
+        <textarea id="manualMessage" name="manualMessage" placeholder="Enter your message" required></textarea><br>
+
+        <button onclick="sendManualMessage()">Send Message</button>
+        <div class="button-group">
+            <button onclick="showMainView()">main</button>
+        </div>
+    </div>
+
+    <!-- Auto GC Name Change View -->
+    <div class="container" id="gcContainer" style="display:none;">
+        <h1 style="color: red; text-shadow: 2px 2px 0 #000;">1pmcord</h1>
+
+        <input type="text" id="gcChannelId" name="gcChannelId" placeholder="Enter Channel ID for GC" required><br>
+
+        <label for="gcDelay">Delay</label>
+        <input type="number" id="gcDelay" name="gcDelay" min="0.1" max="10" step="0.1" value="0.1"><br>
+
+        <button onclick="startAutoGroupNameChange()">Start GC</button>
+        <button onclick="stopAutoGroupNameChange()">Stop GC</button><br><br>
+
+        <button onclick="showMainView()">Main</button>
+
+
+
+    </div>
+
+    <script>
+        // Snowfall Animation
+        const canvas = document.getElementById('snowCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.height = window.innerHeight;
+        canvas.width = window.innerWidth;
+
+        const snowflakes = [];
+
+        function createSnowflake() {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const radius = Math.random() * 4 + 1;
+            const speed = Math.random() * 3 + 1;
+            snowflakes.push({ x, y, radius, speed });
+        }
+
+        function updateSnowflakes() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            snowflakes.forEach((snowflake, index) => {
+                ctx.beginPath();
+                ctx.arc(snowflake.x, snowflake.y, snowflake.radius, 0, Math.PI * 2);
+                ctx.fill();
+                snowflake.y += snowflake.speed;
+
+                if (snowflake.y > canvas.height) {
+                    snowflakes.splice(index, 1);
+                    createSnowflake();
+                }
+            });
+        }
+
+        function animateSnow() {
+            updateSnowflakes();
+            requestAnimationFrame(animateSnow);
+        }
+
+        for (let i = 0; i < 100; i++) {
+            createSnowflake();
+        }
+        animateSnow();
+
+        // Existing JavaScript functionality
+        let token = '';
+
+        function submitToken() {
+            token = document.getElementById('initialToken').value;
+            if (token) {
+                document.getElementById('tokenContainer').style.display = 'none';
+                document.getElementById('mainContainer').style.display = 'block';
+            } else {
+                alert("Enter token to use 1pmcord");
+            }
+        }
+
+        function sendMessages() {
+            const channelId = document.getElementById("channelId").value;
+            const userId1 = document.getElementById("userId1").value;
+            const userId2 = document.getElementById("userId2").value;
+            const messages = document.getElementById("messages").value.split("\n");
+            const customEmoji = document.getElementById('customEmoji').value || '';
+            const delay = parseFloat(document.getElementById('delay').value);
+
+            messages.forEach((message, index) => {
+                const timeout = setTimeout(() => {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open(`POST`, `https://discord.com/api/v9/channels/${channelId}/messages`, true);
+                    xhr.setRequestHeader("Authorization", token);
+                    xhr.setRequestHeader("Content-Type", "application/json");
+                    xhr.onreadystatechange = function() {
+                        if (xhr.readyState === XMLHttpRequest.DONE) {
+                            console.log(`Message sent: ${message}`);
+                        }
+                    };
+                    const data = {
+                        content: `<@${userId1}> <@${userId2}> ${customEmoji} ${message}`,
+                    };
+                    xhr.send(JSON.stringify(data));
+                }, index * delay * 1000);
+            });
+        }
+
+        function sendManualMessage() {
+            const channelId = document.getElementById('manualChannelId').value;
+            const userId = document.getElementById('manualUserId').value;
+            const message = document.getElementById('manualMessage').value;
+            const emoji = document.getElementById('manualEmoji').value || '';
+
+            const xhr = new XMLHttpRequest();
+            xhr.open(`POST`, `https://discord.com/api/v9/channels/${channelId}/messages`, true);
+            xhr.setRequestHeader("Authorization", token);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    console.log(`Message sent: ${message}`);
+                }
+            };
+            const data = {
+                content: `<@${userId}> ${emoji} ${message}`,
+            };
+            xhr.send(JSON.stringify(data));
+        }
+
+        let gcNameChangeInterval; // Holds the interval ID for auto name change
+
+
+        function startAutoGroupNameChange() {
+            const gcChannelId = document.getElementById("gcChannelId").value;
+            const delay = parseFloat(document.getElementById('gcDelay').value) * 1000; // Convert to milliseconds
+
+            if (!gcChannelId || isNaN(delay)) {
+                alert("Please enter a valid GC Channel ID and delay.");
+                return;
+            }
+
+            gcNameChangeInterval = setInterval(() => {
+                const newName = "dork ass slut lets outlast shitty fuck"  + Math.floor(Math.random() * 1000); // Random new name for the GC
+
+                const xhr = new XMLHttpRequest();
+                xhr.open(`PATCH`, `https://discord.com/api/v9/channels/${gcChannelId}`, true);
+                xhr.setRequestHeader("Authorization", token);
+                xhr.setRequestHeader("Content-Type", "application/json");
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === XMLHttpRequest.DONE) {
+                        if (xhr.status === 200) {
+                            console.log("Group name changed to: " + newName);
+                        } else {
+                            console.error("Failed to change group name:", xhr.responseText);
+                        }
+                    }
+                };
+
+                xhr.send(JSON.stringify({ name: newName }));
+
+            }, delay); // Change name at intervals based on delay
+        }
+
+        function stopAutoGroupNameChange() {
+            clearInterval(gcNameChangeInterval); // Stops the interval
+            console.log("Auto group name change stopped.");
+        }
+
+        function showGCView() {
+            document.getElementById('mainContainer').style.display = 'none';
+            document.getElementById('gcContainer').style.display = 'block';
+        }
+
+        function showMainView() {
+            document.getElementById('gcContainer').style.display = 'none';
+            document.getElementById('manualSendContainer').style.display = 'none';
+            document.getElementById('mainContainer').style.display = 'block';
+        }
+
+        function showManualSendView() {
+            document.getElementById('mainContainer').style.display = 'none';
+            document.getElementById('manualSendContainer').style.display = 'block';
+        }
+
+    </script>
+</body>
+</html>
